@@ -109,8 +109,9 @@ def check():
             print("✅ 暂未开售，继续监控...")
 
         return is_open
-
+        
     except Exception as e:
+        # ========== 3. 脚本出错告警 ==========
         error_msg = f"""⚠️ **航展监控脚本出错！**
 
 ⏰ 出错时间: {beijing_time}

@@ -5,7 +5,7 @@ import datetime
 
 URL = "https://www.airshow.com.cn/Category_1278/Index.aspx"
 SOLD_OUT = "购票信息尚未公布"
-KEYWORDS = ["购票", "立即购买", "门票", "¥", "价格", "元", "在线购票", "预订", "售票"]
+KEYWORDS = ["开始","预订", "售票"]
 
 # 用于标记是否已发送过开售通知
 NOTIFIED_OPEN = False

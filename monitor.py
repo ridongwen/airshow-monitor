@@ -116,3 +116,20 @@ def check():
 ⏰ 出错时间: {beijing_time}
 
 ❌ 错误信息:
+```
+{str(e)}
+```
+
+🔗 监控页面: {URL}
+
+⚠️ 请检查：
+1. 目标网站是否可访问
+2. 网络连接是否正常
+3. 脚本是否需要更新"""
+
+        send_alert("🚨 航展监控异常告警", error_msg)
+        print(f"❌ 脚本出错，已发送告警: {e}")
+        return False
+
+if __name__ == "__main__":
+    check()

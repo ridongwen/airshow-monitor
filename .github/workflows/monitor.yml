@@ -21,7 +21,7 @@ jobs:
           python-version: '3.12'
 
       - name: 安装依赖
-        run: pip install requests
+        run: pip install requests pytz
 
       - name: 设置北京时间时区
         run: |

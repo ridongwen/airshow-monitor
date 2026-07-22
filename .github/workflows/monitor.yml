@@ -1,35 +1,45 @@
-name: 航展门票监控
+name: 航展监控
 
 on:
+  # 每30分钟检测一次（包括北京时间9点）
   schedule:
-    # 每30分钟运行一次（UTC时间）
-    # 对应北京时间：每小时的 :00 和 :30
     - cron: '*/30 * * * *'
-  workflow_dispatch:  # 允许手动触发
+  # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-
-      - name: 设置 Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: 安装依赖
-        run: pip install requests pytz
-
-      - name: 设置北京时间时区
-        run: |
-          sudo timedatectl set-timezone Asia/Shanghai
-          echo "TZ=Asia/Shanghai" >> $GITHUB_ENV
-
-      - name: 运行监控
-        env:
-          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
-          TZ: Asia/Shanghai
-        run: python monitor.py
+    - name: 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 恢复状态文件
+      uses: actions/cache@v3
+      id: state-cache
+      with:
+        path: airshow_state.json
+        key: airshow-state-${{ github.run_id }}
+        restore-keys: |
+          airshow-state-
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    
+    - name: 安装依赖
+      run: |
+        pip install requests pytz
+    
+    - name: 运行监控脚本
+      env:
+        SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+      run: python3 monitor.py
+    
+    - name: 保存状态文件
+      uses: actions/cache@v3
+      with:
+        path: airshow_state.json
+        key: airshow-state-${{ github.run_id }}

@@ -9,41 +9,37 @@ URL = "https://www.airshow.com.cn/Category_1278/Index.aspx"
 SOLD_OUT = "购票信息尚未公布"
 KEYWORDS = ["开始","预订", "售票"]
 
-# 状态文件路径（可自定义）
+# 状态文件路径
 STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "airshow_state.json")
 
 def load_state():
     """从文件加载持久化状态"""
     default_state = {
-        "notified_open": False,      # 是否已发送开售通知
-        "today_reported": None,      # 今天已发送日报的日期（格式：YYYY-MM-DD）
-        "last_check_time": None      # 上次检测时间（用于调试）
+        "notified_open": False,
+        "today_reported": None,
+        "last_check_time": None
     }
     
     if os.path.exists(STATE_FILE):
         try:
             with open(STATE_FILE, 'r', encoding='utf-8') as f:
                 state = json.load(f)
-                # 合并默认值，防止缺少字段
                 for key in default_state:
                     if key not in state:
                         state[key] = default_state[key]
                 return state
         except Exception as e:
-            print(f"⚠️ 读取状态文件失败，使用默认状态: {e}")
+            print(f"⚠️ 读取状态文件失败: {e}")
             return default_state.copy()
     else:
-        print(f"📄 状态文件不存在，创建新文件: {STATE_FILE}")
         return default_state.copy()
 
 def save_state(state):
     """保存状态到文件"""
     try:
-        # 确保目录存在
         os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
         with open(STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump(state, f, ensure_ascii=False, indent=2)
-        print(f"💾 状态已保存: {STATE_FILE}")
         return True
     except Exception as e:
         print(f"❌ 保存状态失败: {e}")
@@ -75,12 +71,11 @@ def send_alert(title, msg):
 
 def check():
     """主检测函数"""
-    # ========== 1. 加载持久化状态 ==========
+    # 加载状态
     state = load_state()
     NOTIFIED_OPEN = state.get("notified_open", False)
     TODAY_REPORTED = state.get("today_reported", None)
     
-    # ========== 2. 准备请求 ==========
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -99,23 +94,24 @@ def check():
     print(f"📊 当前状态: 开售通知={NOTIFIED_OPEN}, 日报日期={TODAY_REPORTED}")
 
     try:
-        # ========== 3. 抓取页面 ==========
+        # 抓取页面
         r = requests.get(URL, headers=headers, timeout=30)
         r.encoding = 'utf-8'
         text = r.text
 
         print(f"📄 页面长度: {len(text)} 字符")
 
-        # ========== 4. 分析页面 ==========
+        # 分析页面
         has_sold_out = SOLD_OUT in text
         found_keywords = [k for k in KEYWORDS if k in text]
 
         print(f"  • 包含'尚未公布': {has_sold_out}")
         print(f"  • 检测到关键词: {found_keywords}")
 
-        # ========== 5. 开售检测（最高优先级）==========
+        # 开售检测
         is_open = (not has_sold_out) or (len(found_keywords) > 0)
 
+        # ========== 1. 开售通知（优先级最高）==========
         if is_open and not NOTIFIED_OPEN:
             msg = f"""🎉 **珠海航展门票可能已开放！**
 
@@ -130,17 +126,14 @@ def check():
 ⚠️ 请尽快前往官网购票，热门日期可能很快售罄！"""
 
             send_alert("🎫 航展门票监控提醒", msg)
-            NOTIFIED_OPEN = True  # 更新内存中的状态
-            print("🎉 检测到售票开放！已发送通知")
-            
-            # 立即保存状态
+            NOTIFIED_OPEN = True
             state["notified_open"] = True
             save_state(state)
+            print("🎉 检测到售票开放！已发送通知")
             return True
 
-        # ========== 6. 每日日报（北京时间8点，每天只发一次）==========
-        # 使用文件持久化后，即使脚本在不同时间运行，也能正确判断今天是否已发送
-        if current_hour == 8 and TODAY_REPORTED != today_str:
+        # ========== 2. 每日日报（北京时间9点）==========
+        if current_hour == 9 and TODAY_REPORTED != today_str:
             status_msg = f"""📋 **航展监控日报** ({now.strftime('%m月%d日')})
 
 ⏰ 检测时间: {beijing_time}
@@ -156,26 +149,22 @@ def check():
 🤖 脚本运行正常，继续监控中..."""
 
             send_alert("📋 航展监控日报", status_msg)
-            TODAY_REPORTED = today_str  # 更新内存中的状态
-            
-            # 保存状态到文件
+            TODAY_REPORTED = today_str
             state["today_reported"] = today_str
             state["last_check_time"] = beijing_time
             save_state(state)
             print(f"📋 已发送每日日报 ({today_str})")
         
-        # ========== 7. 输出当前状态 ==========
-        if not is_open:
-            print("✅ 暂未开售，继续监控...")
-        
-        # 更新最后检测时间（非必要，但便于调试）
+        # 更新最后检测时间
         state["last_check_time"] = beijing_time
         save_state(state)
+
+        if not is_open:
+            print("✅ 暂未开售，继续监控...")
 
         return is_open
 
     except Exception as e:
-        # ========== 8. 异常处理 ==========
         error_msg = f"""⚠️ **航展监控脚本出错！**
 
 ⏰ 出错时间: {beijing_time}

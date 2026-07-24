@@ -1,45 +1,48 @@
 name: 航展监控
-
 on:
-  # 每30分钟检测一次（包括北京时间9点）
   schedule:
-    - cron: '*/30 * * * *'
-  # 允许手动触发
+    # 避开整点/半点拥堵时段，错开7分钟触发
+    - cron: '7,37 * * * *'
   workflow_dispatch:
+
+# 防止上一次还没跑完，下一次又触发，导致状态文件冲突
+concurrency:
+  group: airshow-monitor
+  cancel-in-progress: false
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 10   # 防止脚本卡死导致占用runner
+
     steps:
     - name: 检出代码
       uses: actions/checkout@v4
-    
-    - name: 恢复状态文件
-      uses: actions/cache@v3
-      id: state-cache
       with:
-        path: airshow_state.json
-        key: airshow-state-${{ github.repository_id }}
-        restore-keys: |
-          airshow-state-
-    
+        fetch-depth: 1
+
     - name: 设置 Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-    
+        cache: 'pip'   # 加速依赖安装
+
     - name: 安装依赖
-      run: |
-        pip install requests pytz
-    
+      run: pip install requests pytz
+
     - name: 运行监控脚本
       env:
         SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
       run: python3 monitor.py
-    
-    - name: 保存状态文件
-      uses: actions/cache@v3
-      with:
-        path: airshow_state.json
-        key: airshow-state-${{ github.repository_id }}
+
+    - name: 提交状态文件变更
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        if [ -n "$(git status --porcelain airshow_state.json)" ]; then
+          git add airshow_state.json
+          git commit -m "chore: 更新航展监控状态 [skip ci]"
+          git push
+        else
+          echo "状态文件无变化，跳过提交"
+        fi

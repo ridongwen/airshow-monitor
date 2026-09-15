@@ -2,7 +2,7 @@ name: 航展监控
 on:
   # 每30分钟检测一次（包括北京时间9点）
   schedule:
-    - cron: '*/37 * * * *'
+    - cron: '*/39 * * * *'
   # 允许手动触发
   workflow_dispatch:
 jobs:

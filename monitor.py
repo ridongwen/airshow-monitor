@@ -113,7 +113,7 @@ def check():
 
         # ========== 1. 开售通知（优先级最高）==========
         if is_open and not NOTIFIED_OPEN:
-            msg = f"""🎉 **珠海航展门票可能已开放！**
+            msg = f"""🎉 **珠海航展门票可能已开放!!！**
 
 ⏰ 检测时间: {beijing_time}
 
